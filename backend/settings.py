@@ -237,6 +237,8 @@ class _AzureSearchSettings(BaseSettings, DatasourcePayloadConstructor):
         extra="ignore",
         env_ignore_empty=True
     )
+    _type: Literal["azure_search"] = PrivateAttr(default="azure_search")
+    
     service: str = Field(exclude=True)
     index: str = Field(serialization_alias="index_name")
     key: Optional[str] = Field(default=None, exclude=True)
@@ -326,7 +328,7 @@ class _AzureSearchSettings(BaseSettings, DatasourcePayloadConstructor):
         parameters.update(self._settings.search.model_dump(exclude_none=True, by_alias=True))
         
         return {
-            "type": "azure_search",
+            "type": self._type,
             "parameters": parameters
         }
 
@@ -341,6 +343,8 @@ class _AzureCosmosDbMongoVcoreSettings(
         extra="ignore",
         env_ignore_empty=True
     )
+    _type: Literal["azure_cosmosdb"] = PrivateAttr(default="azure_cosmosdb")
+    
     query_type: Literal['vector'] = "vector"
     connection_string: str = Field(exclude=True)
     index: str = Field(serialization_alias="index_name")
@@ -394,7 +398,7 @@ class _AzureCosmosDbMongoVcoreSettings(
         parameters = self.model_dump(exclude_none=True, by_alias=True)
         parameters.update(self._settings.search.model_dump(exclude_none=True, by_alias=True))
         return {
-            "type": "azure_cosmos_db",
+            "type": self._type,
             "parameters": parameters
         }
 
@@ -406,6 +410,8 @@ class _ElasticsearchSettings(BaseSettings, DatasourcePayloadConstructor):
         extra="ignore",
         env_ignore_empty=True
     )
+    _type: Literal["elasticsearch"] = PrivateAttr(default="elasticsearch")
+    
     endpoint: str
     encoded_api_key: str = Field(exclude=True)
     index: str = Field(serialization_alias="index_name")
@@ -463,7 +469,7 @@ class _ElasticsearchSettings(BaseSettings, DatasourcePayloadConstructor):
         parameters.update(self._settings.search.model_dump(exclude_none=True, by_alias=True))
                 
         return {
-            "type": "elasticsearch",
+            "type": self._type,
             "parameters": parameters
         }
 
@@ -475,6 +481,7 @@ class _PineconeSettings(BaseSettings, DatasourcePayloadConstructor):
         extra="ignore",
         env_ignore_empty=True
     )
+    _type: Literal["pinecone"] = PrivateAttr(default="pinecone")
     environment: str
     api_key: str = Field(exclude=True)
     index_name: str
@@ -529,7 +536,7 @@ class _PineconeSettings(BaseSettings, DatasourcePayloadConstructor):
         parameters.update(self._settings.search.model_dump(exclude_none=True, by_alias=True))
         
         return {
-            "type": "pinecone",
+            "type": self._type,
             "parameters": parameters
         }
 
@@ -541,6 +548,8 @@ class _AzureMLIndexSettings(BaseSettings, DatasourcePayloadConstructor):
         extra="ignore",
         env_ignore_empty=True
     )
+    _type: Literal["azure_ml_index"] = PrivateAttr(default="azure_ml_index")
+    
     name: str
     version: str
     project_resource_id: str = Field(validation_alias="AZURE_ML_PROJECT_RESOURCE_ID")
@@ -581,11 +590,49 @@ class _AzureMLIndexSettings(BaseSettings, DatasourcePayloadConstructor):
         parameters.update(self._settings.search.model_dump(exclude_none=True, by_alias=True))
         
         return {
-            "type": "azure_ml_index",
+            "type": self._type,
             "parameters": parameters
         }
 
 
+class _AzureSqlServerSettings(BaseSettings, DatasourcePayloadConstructor):
+    model_config = SettingsConfigDict(
+        env_prefix="AZURE_SQL_SERVER_",
+        env_file=DOTENV_PATH,
+        extra="ignore"
+    )
+    _type: Literal["azure_sql_server"] = PrivateAttr(default="azure_sql_server")
+    
+    connection_string: str = Field(exclude=True)
+    table_schema: str
+    schema_max_row: Optional[int] = None
+    top_n_results: Optional[int] = None
+    
+    # Constructed fields
+    authentication: Optional[dict] = None
+    
+    @model_validator(mode="after")
+    def construct_authentication(self) -> Self:
+        self.authentication = {
+            "type": "connection_string",
+            "connection_string": self.connection_string
+        }
+        return self
+    
+    def construct_payload_configuration(
+        self,
+        *args,
+        **kwargs
+    ):
+        parameters = self.model_dump(exclude_none=True, by_alias=True)
+        #parameters.update(self._settings.search.model_dump(exclude_none=True, by_alias=True))
+        
+        return {
+            "type": self._type,
+            "parameters": parameters
+        }
+    
+    
 class _BaseSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=DOTENV_PATH,
@@ -651,6 +698,10 @@ class _AppSettings(BaseModel):
         elif self.base_settings.datasource_type == "AzureMLIndex":
             self.datasource = _AzureMLIndexSettings(settings=self, _env_file=DOTENV_PATH)
             logging.debug("Using Azure ML Index")
+        
+        elif self.base_settings.datasource_type == "AzureSqlServer":
+            self.datasource = _AzureSqlServerSettings(settings=self, _env_file=DOTENV_PATH)
+            logging.debug("Using SQL Server")
             
         else:
             self.datasource = None

@@ -19,6 +19,7 @@ import {
   conversationApi,
   Citation,
   ToolMessageContent,
+  AzureSqlServerExecResults,
   ChatResponse,
   getUserInfo,
   Conversation,
@@ -27,7 +28,8 @@ import {
   historyClear,
   ChatHistoryLoadingState,
   CosmosDBStatus,
-  ErrorMessage
+  ErrorMessage,
+  AzureSqlServerCodeExecResult
 } from "../../api";
 import { Answer } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
@@ -688,6 +690,25 @@ const Chat = () => {
     return [];
   }
 
+  const parsePlotFromMessage = (message: ChatMessage) => {
+    if (message?.role && message?.role === "tool") {
+      try {
+        const execResults = JSON.parse(message.content) as AzureSqlServerExecResults;
+        const codeExecResult = execResults.all_exec_results.at(-1)?.code_exec_result;
+        if (codeExecResult === undefined) {
+          return null;
+        }
+        return codeExecResult;
+      }
+      catch {
+        return null;
+      }
+      // const execResults = JSON.parse(message.content) as AzureSqlServerExecResults;
+      // return execResults.all_exec_results.at(-1)?.code_exec_result;
+    }
+    return null;
+  }
+
   const disabledButton = () => {
     return isLoading || (messages && messages.length === 0) || clearingChat || appStateContext?.state.chatHistoryLoadingState === ChatHistoryLoadingState.Loading
   }
@@ -732,6 +753,7 @@ const Chat = () => {
                           answer={{
                             answer: answer.content,
                             citations: parseCitationFromMessage(messages[index - 1]),
+                            plotly_data: parsePlotFromMessage(messages[index - 1]),
                             message_id: answer.id,
                             feedback: answer.feedback
                           }}
@@ -753,7 +775,8 @@ const Chat = () => {
                       <Answer
                         answer={{
                           answer: "Generating answer...",
-                          citations: []
+                          citations: [],
+                          plotly_data: null
                         }}
                         onCitationClicked={() => null}
                       />
