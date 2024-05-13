@@ -911,7 +911,12 @@ const Chat = () => {
                 <ReactMarkdown
                   linkTarget="_blank"
                   className={styles.citationPanelContent}
-                  children={DOMPurify.sanitize(activeCitation.content, { ALLOWED_TAGS: XSSAllowTags })}
+                  //RY - Modify the information to add cite information with sharepoint link
+                  children={DOMPurify.sanitize(activeCitation.content
+                    + " <hr /> "
+                    + "<cite><a href=" + activeCitation.url + ">"
+                    + activeCitation.filepath + "</a></cite>",
+                    { ALLOWED_TAGS: XSSAllowTags })}
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}
                 />

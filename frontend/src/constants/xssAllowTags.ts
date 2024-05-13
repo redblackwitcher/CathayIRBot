@@ -40,5 +40,9 @@ export const XSSAllowTags = [
   'tfooter',
   'ul',
   'ol',
-  'li'
+  'li',
+  'hr', //RY - Add addtional HTML tag for citation extra information display
+  'b', //RY - Add addtional HTML tag for citation extra information display
+  'br',  //RY - Add addtional HTML tag for citation extra information display
+  'cite' //RY - Add addtional HTML tag for citation extra information display
 ]

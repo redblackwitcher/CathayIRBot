@@ -16,6 +16,7 @@ export type Citation = {
   metadata: string | null
   chunk_id: string | null
   reindex_id: string | null
+  sharepoint_link: string | null //RY - add sharepoint link to the Citation class
 }
 
 export type ToolMessageContent = {
